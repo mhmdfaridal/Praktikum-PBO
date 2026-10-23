@@ -1,50 +1,60 @@
-from soundplam import Transaksi, Produk, Pengguna, VST, DrumKit, Toko
+from soundplam import (
+    Produk, VST, DrumKit, PresetPack,
+    EmailNotif, WhatsAppNotif, beritahu_pembeli,
+    Toko, Pengguna, Transaksi,
+)
 
-def main():
-    print("=== AGREGASI: produk dibuat di luar, lalu didaftarkan ke Toko ===")
-    serum = VST("Wavetable Synth X", 1500000, 10, "VST3", "Synthesizer")
-    reverb = VST("Hall Reverb Pro", 800000, 3, "VST3", "Effect")
-    trap = DrumKit("Trap Essentials", 250000, 20, 120, "Trap")
+def garis(judul):
+    print(f"\n{'=' * 60}\n{judul}\n{'=' * 60}")
 
-    toko = Toko("SoundPlam")
-    toko.tambah_produk(serum)
-    toko.tambah_produk(reverb)
-    toko.tambah_produk(trap)
-    toko.tampilkan_katalog()
 
-    print("\n=== ASOSIASI: Pengguna memakai Produk lewat parameter ===")
-    budi = Pengguna("Budi", "rahasia123", 5000000)
-    transaksi1 = budi.beli_produk(serum, 1)
-    transaksi1.cetak_struk()
-    transaksi2 = budi.beli_produk(trap, 2)
-    transaksi2.cetak_struk()
+# [BUKTI ABSTRAKSI] => Ntar langsung TypeError Tu
 
-    print("=== KOMPOSISI: Pengguna menyimpan MutasiSaldo miliknya sendiri ===")
-    budi.tambah_saldo(1000000)
-    budi.cetak_mutasi()
+garis("1. BUKTI ABSTRAKSI: Produk tidak bisa diinstansiasi")
+try:
+    produk_langsung = Produk("Coba", "VST Plugin", 1000, 1)
+except TypeError as e:
+    print(f"TypeError: {e}")
 
-    print("\n=== POLIMORFISME & OVERRIDING: info_produk() beda tiap subclass ===")
-    for produk in (serum, trap):
-        produk.info_produk()
 
-    print("\n=== CEK PEWARISAN ===")
-    print("isinstance(serum, Produk)  :", isinstance(serum, Produk))
-    print("isinstance(serum, DrumKit) :", isinstance(serum, DrumKit))
-    print("issubclass(DrumKit, Produk):", issubclass(DrumKit, Produk))
+# [INHERITANCE] => Membuat objek dari 3 subclass Produk
 
-    print("\n=== BUKTI AGREGASI: toko dihapus, produk tetap ada ===")
-    del toko
-    print(f"  Produk masih ada: {serum.nama}, {reverb.nama}, {trap.nama}")
+garis("2. MEMBUAT PRODUK DAN MENAMBAHKAN KE TOKO")
+serum = VST("Serum Wavetable", 2_500_000, 10, "VST3/AU", "Synthesizer")
+trap_kit = DrumKit("Trap Essentials", 350_000, 3, 120, "Trap")
+lofi = PresetPack("Lo-Fi Presets Vol.1", 200_000, 8, 64, "Serum")
 
-    print("\n=== VALIDASI ERROR ===")
-    try:
-        budi.beli_produk(reverb, 99)
-    except ValueError as e:
-        print(" ", e)
+toko = Toko("SoundPlam")
+for produk in (serum, trap_kit, lofi):
+    toko.tambah_produk(produk)
 
-    print()
-    Produk.info_toko()
+
+# [POLIMORFISME VIA PEWARISAN] => Menjalankan method info_produk() dan hitung_diskon() versi class itu sendiri
+
+garis("3. POLIMORFISME: info_produk() dan hitung_diskon() berbeda tiap subclass")
+toko.tampilkan_katalog()
+toko.tampilkan_penawaran()
+
+
+# [DUCK TYPING] => EmailNotif dan WhatsAppNotif tidak berhubungan lewat pewarisan
+
+garis("4. DUCK TYPING: Email dan WhatsApp lewat satu fungsi")
+kanal_budi = [EmailNotif("budi@mail.com"), WhatsAppNotif("0812-1234-5678")]
+beritahu_pembeli(kanal_budi, "Selamat datang di SoundPlam!")
+
+
+# [DIP (SOLID)] => kanal notifikasi disuntikkan ke Pengguna dari luar
+# [Method Konkret] => kurangi_stok() dipakai oleh semua subclass Produk
+
+garis("5. PEMBELIAN: dependency injection + method konkret")
+budi = Pengguna("budi", "rahasia123", 5_000_000, kanal_notif=kanal_budi)
+
+print(f"Stok {trap_kit.nama} sebelum beli: {trap_kit.stok}")
+transaksi = budi.beli_produk(trap_kit, 2)
+print(f"Stok {trap_kit.nama} sesudah beli: {trap_kit.stok}")
+
+transaksi.cetak_struk()
+budi.cetak_mutasi()
+
+print()
 Transaksi.info_transaksi()
-
-if __name__ == "__main__":
-    main()
