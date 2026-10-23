@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
-# [ABSTRAKSI]
+# [ABSTRAKSI] => Abstract Base Class (ABC)
 class Produk(ABC):
     nama_toko = "SoundPlam"
     jumlah_produk = 0
-    kategori_produk = ["VST Plugin", "Drum Kit"]
+    kategori_produk = ["VST Plugin", "Drum Kit", "Preset Pack"]
 
     def __init__(self, nama, kategori, harga, stok):
         self.nama = nama
@@ -52,63 +52,121 @@ class Produk(ABC):
         print(f"Nama Toko: {cls.nama_toko}")
         print(f"Jumlah Produk: {cls.jumlah_produk}")
 
-    # [Abstrak Method 1]
+    # [Abstrak Method 1] => tiap jenis produk punya aturan diskon sendiri
     @abstractmethod
-    def info_detail(self):
+    def hitung_diskon(self):
         pass
 
-    # [Abstrak Method 2]
+    # [Abstrak Method 2] => tiap jenis produk menampilkan info khususnya
     @abstractmethod
-    def hitung_diskon(self, persen):
+    def info_produk(self):
         pass
 
     def tambah_stok(self, jumlah):
         if not isinstance(jumlah, int) or jumlah <= 0:
-            raise ValueError("[!] Error: Jumlah stok yang ditambahkan tidak boleh negatif")
+            raise ValueError("[!] Error: Jumlah stok yang ditambahkan harus lebih dari 0")
         self.stok += jumlah
 
-    # [Method Konkret] => Dipakai Bersama Dengan Sub Class
     def kurangi_stok(self, jumlah):
         if not isinstance(jumlah, int) or jumlah <= 0:
-            raise ValueError("[!] Error: Jumlah stok yang dikurangi tidak boleh negatif")
+            raise ValueError("[!] Error: Jumlah stok yang dikurangi harus lebih dari 0")
         if jumlah > self._stok:
             raise ValueError("[!] Error: Jumlah stok yang dikurangi melebihi stok yang tersedia")
         self.stok -= jumlah
 
-    def info_produk(self):
-        print(f"""
-    Nama     : {self.nama}
-    Kategori : {self.__kategori}
-    Harga    : Rp{self._harga:,.0f}
-    Stok     : {self._stok}""") 
+    def harga_setelah_diskon(self):
+        # Alur sama untuk semua produk, tetapi angka diskonnya ditentukan
+        # oleh hitung_diskon() milik masing-masing subclass (polimorfisme).
+        return self._harga - self.hitung_diskon()
 
-# [INHERINTANCE] => Sub Class Dari Produk
+    def tampilkan_penawaran(self):
+        # Seperti jalankan() pada materi: method konkret yang hanya
+        # memanggil abstract method, tanpa peduli jenis produknya.
+        print(f"  {self.nama:<22} Rp{self._harga:>9,.0f} -> Diskon Rp{self.hitung_diskon():>8,.0f} "
+        f"-> Rp{self.harga_setelah_diskon():>9,.0f}")
+
+
+# [INHERITANCE] => Sub class dari Produk
 class VST(Produk):
     def __init__(self, nama, harga, stok, format_plugin, jenis_plugin):
         super().__init__(nama, "VST Plugin", harga, stok)
-        self.format_plugin = format_plugin
-        self.jenis_plugin = jenis_plugin
+        self.format_plugin = format_plugin   # atribut unik VST
+        self.jenis_plugin = jenis_plugin     # atribut unik VST
 
+    # [Implementasi Abstrak Method 2]
     def info_produk(self):
-        super().info_produk()
+        print(f"  [{self.kategori}] {self.nama}")
+        print(f"    Harga    : Rp{self._harga:,.0f}")
+        print(f"    Stok     : {self._stok}")
         status = "Habis" if self._stok == 0 else ("Hampir habis" if self._stok <= 5 else "Tersedia")
         print(f"    Format   : {self.format_plugin}")
         print(f"    Jenis    : {self.jenis_plugin}")
         print(f"    Lisensi  : {status}")
 
-# [INHERINTANCE] => Sub Class Dari Produk
+    # [Implementasi Abstrak Method 1] => diskon 10%
+    def hitung_diskon(self):
+        return self._harga * 0.10
+
+
 class DrumKit(Produk):
     def __init__(self, nama, harga, stok, jumlah_sample, genre):
         super().__init__(nama, "Drum Kit", harga, stok)
-        self.jumlah_sample = jumlah_sample
-        self.genre = genre
+        self.jumlah_sample = jumlah_sample   # atribut unik DrumKit
+        self.genre = genre                   # atribut unik DrumKit
 
+    # [Implementasi Abstrak Method 2]
     def info_produk(self):
-        super().info_produk()
+        print(f"  [{self.kategori}] {self.nama}")
+        print(f"    Harga    : Rp{self._harga:,.0f}")
+        print(f"    Stok     : {self._stok}")
         harga_per_sample = self._harga / self.jumlah_sample
         print(f"    Sample   : {self.jumlah_sample} file")
         print(f"    Genre    : {self.genre}")
         print(f"    Per sample: Rp{harga_per_sample:,.0f}")
+
+    # [Implementasi Abstrak Method 1]
+    def hitung_diskon(self):
+        return self._harga * 0.6
+
+
+# [OCP - Open/Closed Principle]
+class PresetPack(Produk):
+    def __init__(self, nama, harga, stok, jumlah_preset, synth_target):
+        super().__init__(nama, "Preset Pack", harga, stok)
+        self.jumlah_preset = jumlah_preset
+        self.synth_target = synth_target
+
+    def info_produk(self):
+        print(f"  [{self.kategori}] {self.nama}")
+        print(f"    Harga    : Rp{self._harga:,.0f}")
+        print(f"    Stok     : {self._stok}")
+        print(f"    Preset   : {self.jumlah_preset} preset")
+        print(f"    Untuk    : {self.synth_target}")
+
+    def hitung_diskon(self):
+        return self._harga * 0.05
+
+
+# [DUCK TYPING] => notifikasi
+class EmailNotif:
+    def __init__(self, alamat):
+        self.alamat = alamat
+
+    def kirim(self, pesan):
+        print(f"  [EMAIL => {self.alamat}] {pesan}")
+
+
+class WhatsAppNotif:
+    def __init__(self, nomor):
+        self.nomor = nomor
+
+    def kirim(self, pesan):
+        print(f"  [WA => {self.nomor}] {pesan}")
+
+
+def beritahu_pembeli(kanal_list, pesan):
+    for kanal in kanal_list:
+        kanal.kirim(pesan)
 
 class MutasiSaldo:
     def __init__(self, id_mutasi, tipe, nominal, keterangan):
@@ -122,15 +180,18 @@ class MutasiSaldo:
         simbol = "+" if self.tipe == "KREDIT" else "-"
         return f"[{self.id_mutasi}] {self.tipe:<6} {simbol}Rp{self.nominal:,.0f} | Ket: {self.keterangan}"
 
+
 class Pengguna:
     jumlah_pengguna = 0
     daftar_pengguna = []
 
-    def __init__(self, nama, password, saldo):
+    # [DIP - Dependency Inversion Principle]
+    def __init__(self, nama, password, saldo, kanal_notif=None):
         self.nama = nama
         self.__password = password
         self.__saldo = saldo
         self.__riwayat_mutasi = []
+        self._kanal_notif = kanal_notif if kanal_notif is not None else []
         Pengguna.daftar_pengguna.append(self)
         Pengguna.jumlah_pengguna += 1
 
@@ -172,7 +233,7 @@ class Pengguna:
 
     def tambah_saldo(self, jumlah):
         if jumlah <= 0:
-            raise ValueError("[!] Error: Jumlah saldo yang ditambahkan tidak boleh negatif")
+            raise ValueError("[!] Error: Jumlah saldo yang ditambahkan harus lebih dari 0")
         self.__saldo += jumlah
         self._catat_mutasi("KREDIT", jumlah, "Top up saldo")
 
@@ -192,6 +253,11 @@ class Pengguna:
         transaksi.proses()
         self.__saldo -= transaksi.total_bayar
         self._catat_mutasi("DEBET", transaksi.total_bayar, f"Beli {produk.nama} ({transaksi.id_transaksi})")
+
+        # [Duck Typing]
+        beritahu_pembeli(self._kanal_notif,
+        f"Pembelian {produk.nama} ({transaksi.id_transaksi}) berhasil. "
+        f"Total Rp{transaksi.total_bayar:,.0f}")
         return transaksi
 
     def cetak_mutasi(self):
@@ -206,7 +272,6 @@ class Pengguna:
     Nama    : {self.nama}
     Saldo   : Rp{self.__saldo:,.0f}
         """)
-
 
 
 class Toko:
@@ -230,10 +295,16 @@ class Toko:
         if len(self._daftar_produk) < awal:
             print(f"  [-] {nama} ditarik dari {self.nama_toko}")
 
+    # [POLIMORFISME VIA PEWARISAN]
     def tampilkan_katalog(self):
         print(f"\n  ===== KATALOG {self.nama_toko} ({self.total_produk} produk) =====")
         for produk in self._daftar_produk:
             produk.info_produk()
+
+    def tampilkan_penawaran(self):
+        print(f"\n  ===== PENAWARAN DISKON {self.nama_toko} =====")
+        for produk in self._daftar_produk:
+            produk.tampilkan_penawaran()
 
 
 class Transaksi:
@@ -294,7 +365,7 @@ class Transaksi:
         if self.jumlah > self.produk.stok:
             self.__status = "Gagal"
             raise ValueError(f"[!] Error: Stok tidak cukup (sisa {self.produk.stok})")
-        self.produk.kurangi_stok(self.jumlah)
+        self.produk.kurangi_stok(self.jumlah)  # [Method Konkret] => dipakai semua subclass Produk
         self.__status = "Berhasil"
         Transaksi.total_pendapatan += self.total_bayar
         Transaksi.riwayat.append(self)
